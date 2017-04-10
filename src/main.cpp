@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   ifstream in_file_(in_file_name_.c_str(), ifstream::in);
 
   string out_file_name_ = argv[2];
-  ofstream out_file_(out_file_name_.c_str(), ifstream::in);
+  ofstream out_file_(out_file_name_.c_str(), ofstream::out);
 
   check_files(in_file_, in_file_name_, out_file_, out_file_name_);
 
