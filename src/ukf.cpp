@@ -38,13 +38,13 @@ UKF::UKF() {
   std_laspy_ = 0.15;
 
   // Radar measurement noise standard deviation radius in m
-  std_radr_ = 0.2;
+  std_radr_ = 0.3;
 
   // Radar measurement noise standard deviation angle in rad
-  std_radphi_ = 0.02;
+  std_radphi_ = 0.03;
 
   // Radar measurement noise standard deviation radius change in m/s
-  std_radrd_ = 0.2;
+  std_radrd_ = 0.3;
 
   /**
   TODO:
@@ -89,7 +89,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     if (meas_package.sensor_type_==MeasurementPackage::LASER && use_laser_) {
       x_(0) = meas_package.raw_measurements_(0);
       x_(1) = meas_package.raw_measurements_(1);
-      x_(3) = atan2(x_(1), max(1e-3, x_(0)));
+      x_(3) = 0;
     } else if (meas_package.sensor_type_==MeasurementPackage::RADAR && use_radar_) {
       double ro = meas_package.raw_measurements_(0);
       double phi = meas_package.raw_measurements_(1);
@@ -97,7 +97,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       x_(0) = ro * cos(phi);
       x_(1) = ro * sin(phi);
       x_(2) = ro_dot;
-      x_(3) = phi;
+      x_(3) = 0;
     }
     // initialize weights_
     double weight_0 = lambda_ / (lambda_+n_aug_);
@@ -113,6 +113,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   double delta_t = (meas_package.timestamp_-time_us_)/1000000.0;
   // The following six lines of code are copied from CarND forums.
+  // https://discussions.udacity.com/t/numerical-instability-of-the-implementation/230449/3
   while (delta_t > 0.1) {
   const double dt = 0.05;
     Prediction(dt);
@@ -152,20 +153,20 @@ void UKF::Prediction(double delta_t) {
   MatrixXd Xsig_aug = MatrixXd(n_aug_, 2*n_aug_+1);
   Xsig_aug.col(0) = x_aug;
   MatrixXd L = P_aug.llt().matrixL();
-  
+  double sr = sqrt(lambda_ + n_aug_);
   for (int i=1; i<n_aug_+1; ++i) {
-    Xsig_aug.col(i) = x_aug + sqrt(lambda_+n_aug_) * L.col(i-1);
-    Xsig_aug.col(i+n_aug_) = x_aug - sqrt(lambda_+n_aug_) * L.col(i-1);
+    Xsig_aug.col(i) = x_aug + sr * L.col(i-1);
+    Xsig_aug.col(i+n_aug_) = x_aug - sr * L.col(i-1);
   }
 
   for (int i=0; i<n_aug_*2+1; ++i) {
-    double px = Xsig_aug(0, i);
-    double py = Xsig_aug(1, i);
-    double v = Xsig_aug(2, i);
-    double yaw = Xsig_aug(3, i);
-    double yawd = Xsig_aug(4, i);
-    double nu_a = Xsig_aug(5, i);
-    double nu_yawdd = Xsig_aug(6, i);
+    const double px = Xsig_aug(0, i);
+    const double py = Xsig_aug(1, i);
+    const double v = Xsig_aug(2, i);
+    const double yaw = Xsig_aug(3, i);
+    const double yawd = Xsig_aug(4, i);
+    const double nu_a = Xsig_aug(5, i);
+    const double nu_yawdd = Xsig_aug(6, i);
     double px_p, py_p;
 
     if (fabs(yawd) > 0.001) {
